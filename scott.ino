@@ -1,10 +1,9 @@
 /*
   TODOs:
-  - optimize code
-  - recorder
-  - sum+
-  - reduce font amount
+  - setcontrast ins menu (statt rotup) and f-0 neu belegen (ROTup, PI
+  - unite const und cmd
   - HELP shows shift-keys
+  - SOLVE INT
 
 
   ____________________
@@ -21,12 +20,28 @@
         PREAMBLE
   ____________________
 
-    To see what a simple and cheap microcontroller like the ATTINY85 is able to
-    perform was a challenge with the project ScArY. But as ScArY was based on a
-    premanufactured display/keyboard-board SCOTT works with simple and cheap
-    hardware.
+    It is amazing how much calculator power a simple microcontroller like the
+    ATTINY85 is able to perform. This 8 pin 8-bit core microcontroller provides
+    only 8 kilobytes of flash memory to store program code, 512 bytes of RAM
+    to handle variables and 512 bytes of EEPROM to save settings and user data
+    permanently. So every byte is valuable and it took me many hours to optimize
+    the code and to decide which function or feature to choose.
 
-    So beside an ATTINY85 microcontroller SCOTT is based on an OLED display and a
+    In general, functionality and functions outweighted comfort and error handling
+    which can be seen, for instance, looking at the permanent scientific display
+    format or a "non interpretable" display after dividing by zero. Thus the
+    user has to follow the calculation process more strictly than on conventional
+    RPN calculators.
+
+    Enjoy!
+    deetee
+
+  ____________________
+
+     INTRODUCTION
+  ____________________
+
+    Beside an ATTINY85 microcontroller SCOTT is based on an OLED display and a
     16 key one wire keypad. As SCOTT is powered by one 3V battery only a good
     power management is essential.
 
@@ -37,7 +52,7 @@
     SCOTT uses the internal RAM of the SSD1306 display controller as screenbuffer,
     what saves valuable RAM of the ATTINY. And to speed up the relatively slow
     I2C-communication with the display SCOTT splits the controller RAM. So while
-    one half of the RAM is used to diplay its content the other half is filled with
+    one half of the RAM is used to display its content the other half is filled with
     content via the I2C line. With a RAM swap the new content is displayed
     rapidly (without the effect of "dropping in characters").
 
@@ -45,8 +60,326 @@
     which can be seen for instance at the permanent scientific display format or
     a "non interpretable" display after dividing by zero.
 
-    Enjoy!
-    deetee
+    Features of SCOTT:
+    - Scientific RPN calculator (similar to those famous HP calculators)
+    - Power settings:
+      - Set the contrast of the display and save the value permanently to EEPROM.
+      - Display the recent battery voltage.
+      - Shift SCOTT into a deep sleep mode.
+    - Function menu to browse and call every operation of SCOTT comfortable with
+      cursor and function keys.
+    - Basic functions for number input, basic arithmetical operation and memory.
+    - Low level functions like squareroot, power and inverse.
+    - High level functions like exponential, logarithmic, trigonometric and hyperbolic.
+    - User definable keys to store and load 10 physical constants to/from EEPROM
+      permanently.
+    - User definable keys for fast access of 10 functions/commands.
+    - Basic financial function (present value).
+    - Conversion of polar and rectangular coordinates
+  Gaussian normal distribution (CDF, PDF), Statistics (Mean value, standard deviation)
+  Linear Regression
+  3 User definable functions Type recorder record sequences of keypresses (EEPROM)
+  ____________________
+
+    THE CALCULATOR
+  ____________________
+
+    DISPLAY (permanent SCI notation)
+
+           mantissa         exponent                  mantissa         exponent
+       ____|________________|____                ____|________________|____
+      |    |                     |              |    |                |    |
+      |    |              - e e  |              |  - m . m m m m m  - e e  |
+      |  - m . m m m m m    o ^  |              |  M1(7)    M2(8)    M3(9) |
+      |__|__________________|_|__|              |__|________|________|_____|
+         |                  | |                    |        |        |
+         sign               | shift indicator   MENU (function keys 7, 8 and 9)
+                            record indicator
+
+
+    KEYS:
+             //    [SHIFT]          7 [MENU]  (F1)    8 [SUM+] (F2)    9   [/] (F3)
+             // EE [SWAP] (UP)      4 [CONST]         5 [CMD]          6   [*]
+             // +- [ROT]  (DOWN)    1 [RCL]           2 [STO]          3   [-]
+             // C  [OFF]            0 [CONTR]         . [BATT]       ENTER [+]
+
+      [SHIFT]            7 [(MENU)] (F1)     8 [SUM+] (F2)      9   [/](F3)
+      EE [ROT](UP)       4 [CONST]           5 [CMD]            6   [*]
+      +- [ROT](DOWN)     1 [RCL]             2 [STO]            3   [-]
+      C  [OFF]           0 [BATT]            . [SWAP]         ENTER [+]
+
+    MENU:
+       SQRT  POW   INV   ... Basic Functions
+       EXP   LN    !
+       ->P   ->R   PV    ... Polar/Rectangular Conversion, Present Value (Annuity)
+       ND    STA   LR    ... Normal Distribution, Statistics, Linear Regression
+       SIN   COS   TAN   ... Trigonometric Functions
+       ASIN  ACOS  ATAN
+       SINH  COSH  TANH  ... Hyperbolic Functions
+       ASINH ACOSH ATANH
+       CONST CMD   LIT   ... Set Constant, User Defined Command Key and Brightness
+       REC1  REC2  REC3  ... Record user keypress sequence ("Type Recorder")
+       PLAY1 PLAY2 PLAY3 ... Play user keypress sequence ("Type Recorder")
+
+
+  ENTERING NUMBERS:
+
+    1 Enter mantissa (with '.' if applicable)
+      Press ENTER to push mantissa to stack
+    2 To enter power of ten:
+      Enter exponent and (if applicable) change sign of exponent with CHS
+    3 Press EE to link the mantissa with the exponent
+    4 If applicable: Toggle sign of number with CHS
+
+
+  ____________________
+
+  OPERATIONS and KEYS
+  ____________________
+
+    BASIC KEYS:
+      0 1 2 3 4 5 6 7 8 9 . ... Digits and decimal point
+      CHS EE                ... Change sign and enter exponent (actually Y*10^X)
+      ENTER                 ... Enter number (push stack)
+      C                     ... Clear X, clear entry or escape/stop
+      f                     ... Function or shift to choose shifted keys
+
+    F-KEYS:
+      + - * /    ... Basic operations
+      STO RCL    ... Store number to respectively recall number from memory
+      SHOW       ... Show full mantissa of number (7 digits without decimal point)
+      SWAP       ... Swap X and Y register of stack (X<->Y)
+      ROT        ... Rotate stack (X=Y Y=Z Z=T T=X)
+      SUM        ... Enter X-data for statistics or X,Y-data for linear regression
+      MENU       ... Browse menu
+      REC        ... Records 8x52 keypresses (to recall via user menu "abcdEFGH")
+      CONST      ... Browse up to 10 user saved constants
+      SAVE       ... Save up to 10 user saved constants
+      zZZ RESCUE ... Toggle screensaver and save calculator state to EEPROM
+      BRIGHTNESS ... Set brightness of display (0...7)
+
+    MENU-FUNCTIONS:
+      EXP LN SQRT POWER INV            ... Basic scientific operations
+      ANNU ->P ->R                     ... Annuity, polar/rectangular ... x)
+      GAMMA GAUSS                      ... Gamma/!, Probability(PDF/CDF)  ... x)
+      STAT LR                          ... Statistics, linear regression
+      SIN  COS  TAN  ASIN  ACOS  ATAN  ... Trigonometric
+      SINH COSH TANH ASINH ACOSH ATANH ... Hyperbolic ... x)
+      a b c d E F G H                  ... user menu (play recorded keypresses)
+
+      x) ... Some functions (ANNU, ->P, ->R, GAMMA, GAUSS, HYP) may affect the
+             whole stack as they are calculated with basic operations.
+
+
+  ____________________
+
+     SPECIALITIES
+  ____________________
+
+
+    POWER MANAGEMENT
+
+      As SCOTT is supplied with battery power a severe power management is
+      essential. After 10 seconds without pressing a key the display brightness
+      will be reduced to a minimum. After 10 more seconds the display will be
+      deactivated. Till now every further keypress will be interpreted as
+      normal keypress for calculations.
+      After 10 more seconds without pressing a key SCOTT falls into a deep sleep
+      mode. Only a pin change (pressing any key in the upper part of the keyboard)
+      wakes SCOTT up, but this keypress will not be interpreted as normal keypress
+      for calculations.
+
+      If demanded the user can enter the sleep mode by pressing SHIFT and CLR.
+      Additionally SCOTT saves the stack and brightness values to the EEPROM.
+      By pressing SHIFT and DOT the battery voltage will be shown.
+      The default brightness of the display can be set by entering a value
+      (0...255) followed by SHIFT and 0.
+
+      Running on a single battery (CR2032) SCOTT draws a current of 10 mA
+      (bright display with a lot of "8s"). With a battery capacity of at least
+      200 mAh SCOTT can calculate approximately 20 hours.
+      After dimming the current falls to 5.5 mA, after deactivating the display
+      1.1 mA are needed.
+      In sleep mode SCOTT consumes less than 0.25 mA. With a battery capacity of
+      at least 200 mAh SCOTT lasts more than a month in sleep mode.
+
+
+    USER DEFINED FUNCTION KEYs
+
+    COMMANDS (Numbers and corresponding ASCII characters)
+
+      NR ASC COMMAND         NR ASC COMMAND         NR ASC COMMAND
+      ------------------     ------------------     ------------------
+      00 0-9 Numbers
+      01  :  DOT             21  N  nop             41  b  COSH
+      02  ;  CLX             22  O  SQRT            42  c  TANH
+      03  <  EE              23  P  POW(y^x)        43  d  ASINH
+      04  =  ENTER           24  Q  INV(1/x)        44  e  ACOSH
+      05  >  CHS             25  R  EXP             45  f  ATANH
+      06  ?  BATT            26  S  LN              46  g  SETCONST
+      07  @  RCL             27  T  GAMMA(!)        47  h  SETCMD
+      08  A  STO             28  U  R2P             48  i  CONTR
+      09  B  SUB(-)          29  V  P2R             49  j  REC1
+      10  C  nop             30  W  PV              50  k  REC2
+      11  D  CMD(user)       31  X  ND              51  l  REC3
+      12  E  MULT(*)         32  Y  STAT            52  m  PLAY1
+      13  F  MENU            33  Z  SETCMD          53  n  PLAY2
+      14  G  nop             34  [  SIN             54  o  PLAY3
+      15  H  DIV(/)          35  \  COS             55  p  SUM1
+      16  I  SWAP            36  ]  TAN             56  q  SUM2STACK
+      17  J  SLEEP           37  ^  ASIN            57  r  SHADOWSAVE
+      18  K  RORup           38  _  ACOS            58  s  SHADOWLOAD1
+      19  L  ADD(+)          39  `  ATAN            59  t  SHADOWLOAD2
+      20  M  ROT             40  a  SINH            60  u  ENTER3
+
+
+    PREPARING ScArY AFTER FLASHING:
+
+      As ScArY saves the state (stack and brightness values) when pressing the
+      f-key twice (screensaver) it also loads the state after switching on.
+      But flashing the ATTINY may clear the EEPROM. So the loaded state when
+      switching on the first time after flashing gets undefined values
+      (... and maybe a dark or "non interpretable" display).
+
+      So the following procedure may help to bring ScArY in a defined state:
+        1 Press CLX (X=0)        ... even if the display remains dark
+        2 Set brightness (f-CLX) ... a "non interpretable" display is readable
+        3 Press CLX (X=0)        ... value of 0 should be readable
+        4 Press ENTER 3 times    ... clears the stack (X=Y=Z=T=0)
+        5 Press STO (f-2)        ... clears mem
+        6 Press f twice (f-f)    ... saves state to EEPROM (activates screensaver)
+        7 Press f                ... (re)activates the screen
+
+
+    WORKING WITH CONSTANTS:
+
+      ScArY is capable to save up to 10 constants permanently to the
+      EEPROM memory. Additional to each constant up to three characters can be
+      saved to recall and browse the constants very comfortable.
+      See "Appendix - Physical Constants" for some physical constants.
+
+      Example to write PI to slot O:
+        1 3.141593 STO        ... store PI
+        2 0 ENTER 115 ENTER 6 ... enter 3 characters (" PI"), see "Appendix -
+                                  Identifiers of 7-Segment Displays"
+        3 ENTER 0             ... enter slot 0
+        4 SAVE                ... save constant to EEPROM
+
+      Example to load stored constant:
+        1 CONST         ... enter the catalogue of constants
+          Use UP/DOWN-keys for browsing or enter a number directly (0...9)
+        2 ENTER         ... load constant to stack
+
+
+    TYPE RECORDER:
+
+      ScArY is able to record 8 user defined sequences of keypresses
+      (up to 52 each) and "replay" them by selecting the appropriate
+      user menu entry. These user defined key sequences or formulas are stored
+      to the EEPROM memory permanently.
+
+      Example to record temperature conversion (Fahrenheit -> Celsius):
+        1 3 REC      ... record to slot 3 (user menu c)
+        2 32 - 1.8 / ... convert to celsius
+        3 REC        ... stop recording
+
+      Convert Fahrenheit to Celsius:
+        1 50 MENU->c ... play recorded user formula in slot c (=3)
+        2 X=10       ... 50 Fahrenheit are 10 Celsius
+
+
+    ANNUITY (PRESENT VALUE):
+
+      Example to calculate the present value of a $1 5 year return with an
+      interest rate of 8%:
+        1 .08 ENTER 5 ANNU ... annuity factor for 5 years and 8%
+        2 X=3.99 ... 5 years $1 each are equal to ~$4 invested with 8%
+
+
+    GAUSS:
+                     y
+                     ^
+                     |
+                   1 ------------------------
+                     |       +++++++ CDF (Cumulative Distribution Function)
+                     |   +
+                     | +                     (x)         .
+                     |+              CDF = integral(PDF) = 1/(1+exp(-0.07*x^3-1.6*x))
+                     +                      (-inf)
+                   **+**
+                **  +|   **
+                  +  |     *         PDF = 1/sqrt(2*PI)*exp(-x*x/2)
+             ** +    |      **
+      +*+*+*+        |         ***** PDF (Probability Density Function)
+      ---------------+------------------------> x
+
+      Example to calculate PDF and CDF at x=0:
+        1 0 GAUSS
+        2 PDF=0.3989=1/sqrt(2*PI)
+        3 SWAP
+        4 CDF=0.5
+
+
+    STATISTICS, LINEAR REGRESSION:
+        y
+        ^                /
+        |  Ypredict(x=1.5)=4
+      4 - <----------- /
+        |             /
+        |            / ^
+        |           /  |
+        |          /
+      3 -        [*] P2=(1|3)
+        |        /
+        |       /      ^
+        |      /       |
+        |     /
+      2 -   [*] P1=(0.5|2)
+        |   /
+        |_ /           ^
+        | /|           |
+        |/ |           |
+      1 -  |           |
+       /|  |           |
+      / |  |           |
+     /  |  | Xpredict(y=1.5)=0.25
+        |  v           |
+    ----+----+----|----+----|-> x
+        0       | 1         2
+                |
+                Xmean=0.75
+             |  |
+           ->|--|<- Standard Deviation S=0.354
+
+      Example to calculate mean value and standard deviation:
+        1 0.5 SUM 1 SUM ... enter X-data
+        2 STAT
+        3 Xmean=0.75 (mean value)
+        4 SWAP
+        5 S=0.354 (standard deviation)
+
+      Example to calculate a linear regression:
+        1 2 ENTER 0.5 SUM ... enter YX-data of first node
+        2 3 ENTER 1 SUM   ... enter YX-data of second node
+        3 1.5 LR          ... enter desired x/y-value
+        4 X=0.25          ... predicted x-value for y=1.5
+        5 SWAP
+        6 Y=4             ... predicted y-value for x=1.5
+
+      Example to calculate the line of best fit:
+        1 2 ENTER 0.5 SUM ... enter YX-data of first node
+        2 3 ENTER 1 SUM   ... enter YX-data of second node
+        3 1 LR SWAP       ... enter x-value of 1
+        4 Y=3             ... predicted y-value for x=1
+        5 0 LR ROT        ... enter x-value of 0
+        6 Y=1             ... predicted y-value for x=0 (y-axis-intercept)
+        7 -               ... substract y(1) and y(0) (=slope)
+        8 X=2             ... slope of best-fit-line
+        9 y = 2 * x + 1   ... formula of best-fit-line
+
+  ____________________
+
+       HARDWARE
   ____________________
 
 
@@ -84,7 +417,7 @@
        |   ____                                            Ra = Rb = Rc = 3k3
        +--|_R__|---GND
 
-
+             Approximate keycode with quadratic function:  keyvalue = 2 * keynr^2 + 470
 
 
     ATTINY85 Microcontroller:
@@ -105,12 +438,247 @@
     Power Source:
       - 1 x CR2032 battery (3V)
 
-    KEYS:
-                 [SHIFT]          7 [MENU]  (F1)    8 [] (F2)      9   [/] (F3)
-              EE [SWAP] (UP)      4 [CONST]         5 [CMD]        6   [*]
-              +- [ROT]  (DOWN)    1 [RCL]           2 [STO]        3   [-]
-              C  [OFF]            0 [CONTR]         . [BATT]     ENTER [+]
 
+    EEPROM usage (512 bytes):
+
+      | CONTRAST | STACK | CMD | CONST | REC1 | REC2 | REC3 | EOREC | EOEE
+      0          1       21    31      71     217    363    509     511
+      | +1       | +20   | +10 | +40   | +146 | +146 | +146 | +2    |
+
+
+  ____________________
+
+        PLAYSTRING
+  ____________________
+
+    To save flash memory a lot of functions are calculated with SCOTT itself
+    (and not with libraries). Every command of SCOTT can be dispatched with one
+    character (one byte command - see chapter COMMANDS). So a sequence of commands
+    can be represented and "played" with a sequence of characters in a string.
+    After playing a string the result(s) is/are shown in the register(s) X
+    and/or Y. Other parts of the stack (including mem) will be restored from a
+    "shadow stack".
+
+
+    PLAYSTRING - PSEUDO CODES
+
+      COS (Cosine)
+        COMMANDS (5): CHS 90 + SIN
+
+        Converts    4 mem  -    to:     -
+        stack[]     ---------         -----
+        (incl.      3  t   -            -        cos(x) = sqrt(1 - sin(x)*sin(x))
+        mem)        2  z   -            -
+        from:       1  y   -            -
+                    0  x   x          cos(x)
+
+
+      TAN (Tangent)
+        COMMANDS (9): SIN ENTER ENTER * CHS 1 + SQRT /
+
+        Converts    4 mem  -    to:     -
+        stack[]     ---------         -----               sin(x)          sin(x)
+        (incl.      3  t   -            -        tan(x) = ------ = -----------------------
+        mem)        2  z   -            -                 cos(x)   sqrt(1 - sin(x)*sin(x))
+        from:       1  y   -            -
+                    0  x   x          tan(x)
+
+
+      ACOS (Arcus Cosine)
+        COMMANDS (4): ASIN CHS 90 +
+
+        Converts    4 mem  -    to:     -
+        stack[]     ---------         ------
+        (incl.      3  t   -            -        acos(x) = 90 - asin(x)
+        mem)        2  z   -            -
+        from:       1  y   -            -
+                    0  x   x          acos(x)
+
+
+      ATAN (Arcus Tangent)
+        COMMANDS (10): ENTER ENTER ENTER * 1 + SQRT INV * ASIN
+
+        Converts    4 mem  -    to:     -
+        stack[]     ---------         ------                           x
+        (incl.      3  t   -            -        atan(x) = asin( ------------- )
+        mem)        2  z   -            -                        sqrt(1 + x*x)
+        from:       1  y   -            -
+                    0  x   x          atan(x)
+
+
+      PV (Present Value)
+        COMMANDS (14): CHS SWAP ENTER 1 + SWAP ROT SWAP PWR CHS 1 + ROTup /
+
+        Converts    4 mem  -    to:     -
+        stack[]     ---------         -------              1 - (1+i)^-n
+        (incl.      3  t   -            -        PV(i,n) = ------------
+        mem)        2  z   -            -                       i
+        from:       1  y   i            -
+                    0  x   n          PV(i,n)
+
+
+      GAMMA (due to formula of Nemes)
+        COMMANDS (33): 1 + ENTER ENTER ENTER 12 * SWAP 10 * INV - INV +
+                     1 EXP / SWAP PWR 2.506628 ROTup SQRT / *
+
+
+        Converts    4 mem  -    to:    -
+        stack[]     ---------         ---                                 x + 1/(12*x - 1/10/x)
+        (incl.      3  t   -           -         (x-1)! = sqrt(2*PI/x)* (----------------------)^x
+        mem)        2  z   -           -                                            e
+        from:       1  y   -           -
+                    0  x   x           x!
+
+
+      SINH (Hyperbolic Sine)
+        COMMANDS (7): EXP ENTER INV CHS + 2 /
+
+        Converts    4 mem  -    to:      -
+        stack[]     ---------         -------              exp(x) - exp(-x)
+        (incl.      3  t   -             -       sinh(x) = ----------------
+        mem)        2  z   -             -                        2
+        from:       1  y   -             -
+                    0  x   x          sinh(x)
+
+
+      COSH (Hyperbolic Cosine)
+        COMMANDS (6): EXP ENTER INV + 2 /
+
+        Converts    4 mem  -    to:      -
+        stack[]     ---------         -------              exp(x) + exp(-x)
+        (incl.      3  t   -             -       cosh(x) = ----------------
+        mem)        2  z   -             -                        2
+        from:       1  y   -             -
+                    0  x   x          cosh(x)
+
+
+      TANH (Hyperbolic Tangent)
+        //COMMANDS (12): 2 * CHS EXP ENTER CHS 1 + SWAP 1 + /
+        COMMANDS (9): 2 * EXP 1 - ENTER 2 + /
+
+        Converts    4 mem  -    to:      -
+        stack[]     ---------         -------              exp(x) - exp(-x)
+        (incl.      3  t   -             -       tanh(x) = ----------------
+        mem)        2  z   -             -                 exp(x) + exp(-x)
+        from:       1  y   -             -
+                    0  x   x          tanh(x)
+
+
+      ASINH (Area Hyperbolic Sine)
+        COMMANDS (8): ENTER ENTER * 1 + SQRT + LN
+
+        Converts    4 mem  -    to:      -
+        stack[]     ---------         --------
+        (incl.      3  t   -             -       asinh(x) = ln(x + sqrt(x*x + 1))
+        mem)        2  z   -             -
+        from:       1  y   -             -
+                    0  x   x          asinh(x)
+
+
+      ACOSH (Area Hyperbolic Cosine)
+        COMMANDS (8): ENTER ENTER * 1 - SQRT + LN
+
+        Converts    4 mem  -    to:      -
+        stack[]     ---------         --------
+        (incl.      3  t   -             -       acosh(x) = ln(x + sqrt(x*x - 1))
+        mem)        2  z   -             -
+        from:       1  y   -             -
+                    0  x   x          acosh(x)
+
+
+      ATANH (Area Hyperbolic Tangent)
+        COMMANDS (11): ENTER ENTER 1 + SWAP CHS 1 + / SQRT LN
+
+        Converts    4 mem  -    to:      -
+        stack[]     ---------         --------                      1 + x
+        (incl.      3  t   -             -       atanh(x) = ln(sqrt(-----))
+        mem)        2  z   -             -                          1 - x
+        from:       1  y   -             -
+                    0  x   x          atanh(x)
+
+
+      SUM (Prepare stack/arguments for summarizing)
+        COMMANDS (12): 1 STO ROT ENTER ENTER * ROT * ROT SWAP SQRT SUM1
+
+        Converts    4 mem  -    to:    1    and where
+        stack[]     ---------         ---   SUM1 adds
+        (incl.      3  t   -          x*y   stack[i]
+        mem)        2  z   -          x*x   to
+        from:       1  y   y           y    sum[i]
+                    0  x   x           x
+
+
+      ND (Normal Distribution: Probability Density and Cumulative Distribution Function)
+        //COMMANDS (38): ENTER ENTER ENTER * * .07 * CHS SWAP 1.6 * CHS + EXP 1 + INV
+        //               SWAP ENTER * CHS 2 / EXP 0.3989423 *
+        COMMANDS (37): ENTER ENTER ENTER * * .07 * CHS SWAP 1.6 * - EXP 1 + INV
+                       SWAP ENTER * CHS 2 / EXP 0.3989423 *
+
+        Converts    4 mem  -    to:    -                  (x)
+        stack[]     ---------         ---        CDF = integral(PDF) = 1/(1 + exp(-0.07*x^3 - 1.6*x))
+        (incl.      3  t   -           -                 (-inf)
+        mem)        2  z   -           -
+        from:       1  y   -          CDF        PDF = 1/sqrt(2*PI) * exp(-x*x/2)
+                    0  x   x          PDF
+
+
+      R2P (Rectangular to Polar Coordinates)
+        COMMANDS (14): ENTER * SWAP ENTER ENTER ROT * + SQRT ENTER ROT / ASIN ROTup
+
+        Converts    4 mem  -    to:    -
+        stack[]     ---------         ---      r = sqrt(x*x + y*y)
+        (incl.      3  t   -           -
+        mem)        2  z   -           -                 y
+        from:       1  y   y           a       a = atan(---)
+                    0  x   x           r                 x
+
+
+      P2R (Polar to Rectangular Coordinates)
+        COMMANDS (15): SWAP SIN ENTER ENTER * CHS 1 + SQRT ROT * ROT * SWAP ROT
+
+        Converts    4 mem  -    to:    -
+        stack[]     ---------         ---      y = r * sin(a)
+        (incl.      3  t   -           -
+        mem)        2  z   -           -
+        from:       1  y   a           y       x = r * cos(a)
+                    0  x   r           x
+
+
+      STAT (Statistik, Mean Value, Standard Deviation)
+        COMMANDS (16): SWAP ROT ENTER RCL / ENTER ROT * CHS + RCL 1 - / SQRT SWAP
+
+        Converts    4 mem  n    to:    -                 XX - X^2 / n
+        stack[]     ---------         ---      d = sqrt(--------------)
+        (incl.      3  t   XY          -                     n - 1
+        mem)        2  z   XX          -
+        from:       1  y   Y           d       m = X / n
+                    0  x   X           m
+
+
+      QE (Quadratic Equation)
+        COMMANDS (25): SWAP 2 / CHS ENTER ENTER * SWAP ROT SWAP - SQRT ROT ROT
+                       ENTER ROTup ENTER ROT SWAP ROT - ROT + SWAP ROT
+
+        Converts    4 mem  -    to:    -
+        stack[]     ---------         ---      y = x*x + p *x + q
+        (incl.      3  t   -           -
+        mem)        2  z   -           -       x1 = -p/2 + sqrt((p/2)^2 - q)
+        from:       1  y   p           x2
+                    0  x   q           x1      x2 = -p/2 - sqrt((p/2)^2 - q)
+
+
+      LR (Linear Regression)
+        COMMANDS (33): SUM2STACK * SWAP RCL * ROTup RCL * ROTup SHADOWSAVE
+                       SUM2STACK ENTER * SHADOWLOAD1
+                       SWAP ROT - ROT - ROTup / ENTER ENTER ENTER SHADOWSAVE
+                       SUM2STACK SHADOWLOAD2 ROTup * - RCL / SWAP
+
+        Converts    4 mem  n    to:    -
+        stack[]     ---------         ---      y = a * x + b
+        (incl.      3  t   XY          -
+        mem)        2  z   XX          -       a = (XY*n - X*Y) / (XX*n - X*X)
+        from:       1  y   Y           b
+                    0  x   X           a       b = (Y - X*a) / n
 
 
     DEC<->HEX
@@ -145,6 +713,77 @@
       096 60  |  ` a b c d e f g h i j k l m n o
       112 70  |  p q r s t u v w x y z { | } ~
 
+
+    PHYSICAL CONSTANTS:
+
+      Constant      ID  Name
+      ---recommended:-------------------------------------------
+      3.141593      PI  Number PI
+      0.01745329    RpD Radians per Degrees
+      ---from WP34S-Manual:-------------------------------------
+      365.2425      A   Gregorian year
+      5.291772E-11  Ao  Bohr radius
+      384.4E6       Am  Semi-major axis of the Moon's orbit
+      1.495979E11   Ae  Semi-major axis of the Earth's orbit
+      2.997942E8    c   Speed of light
+      3.741772E-16  C1  First radiation constant
+      0.01438777    C2  Second radiation constant
+      1.602177E-19  e   Electron charge
+      96485.34      F   Faraday constant
+      2.502908      Fa  Feigenbaum's alpha
+      4.669202      Fd  Feigenbaum's delta
+      9.80665       g   Standard earth accelleration
+      6.674083E-11  G   Newtonian constant of gravitation
+      7.748092E-5   Go  Conductance quantum
+      0.9159656     Gc  Catalan's constant
+      -2.002232     Ge  Lande's electron g-factor
+      6.626069E-34  h   Planck constant
+      1.38065E-23   k   Boltzmann constant
+      4.835979E14   Kj  Josephson constant
+      1.616199      lP  Planck length
+      9.109383E-31  me  Electron mass
+      7.349E22      mM  Mass of the Moon
+      1.674927E-27  mn  Neutron mass
+      1.672622E-27  mp  Proton mass
+      2.17651E-8    mP  Planck mass
+      1.660539E-27  mu  Atomic mass unit
+      1.492417E-10  Muc Energy equivalent of atomic mass unit
+      1.883541E-28  mm  Muon mass
+      1.9891E30     mS  Mass of the Sun
+      5.9736E24     mE  Mass of the Earth
+      6.022141E23   NA  Avogadro's number
+      101325        po  Standard atmospheric pressure
+      1.875546E-18  qP  Planck charge
+      8.314472      R   Molar gas constant
+      2.81794E-15   re  Electron radius
+      25812.81      RK  Von Klitzing constant
+      1.73753E6     RM  Mean radius of the Moon
+      1.097373E7    Ryd Rydberg constant
+      6.96E8        rS  Mean radius of the Sun
+      6.37101E6     rE  Mean radius of the Earth
+      273.15        To  Standard temperature
+      5.39106E-44   tP  Planck time
+      1.416833E-32  TP- Planck temperature
+      0.02241397    Vm  Molar volume of an ideal gas
+      376.7303      Zo  Impedance of vacuum
+      7.297353E-3   _A  Fine structure constant
+      0.5772157     _GE Euler-Mascheroni constant
+      2.675222E8    _GP Proton gyromagnetic ratio
+      8.854188E-12  _Eo Electric constant or vacuum permitivity
+      2.42631E-12   _Le Compton wavelength of the electron
+      1.319591E-15  _Ln Compton wavelength of the neutron
+      1.32141E-15   _Lp Compton wavelength of the proton
+      1.256673E-6   _mo Magnetic constant or vacuum permeability
+      9.274009E-24  _mB Bohr's magneton
+      -9.284764E-24 _me Electron magnetic moment
+      -9.662364E-27 _mn Neutron magnetic moment
+      1.410607E-26  _mp Proton magnetic moment
+      5.050783E-27  _mu Nuclear magneton
+      -4.490448E-26 _mm Muon magnetic moment
+      5.670373E-8   _SB Stefan-Boltzmann constant
+      1.618034      _P  Golden ratio
+      2.067834E-15  _Po Magnetic flux quantum
+
 */
 
 
@@ -158,29 +797,27 @@
 
 // ***** F O N T
 
-#define FONTOFFSET 32
+#define FONTOFFSET ','
 #define FONTWIDTH 5
 const byte font [] PROGMEM = { // Edged font
-  0x00, 0x00, 0x00, 0x00, 0x00, // sp
-  0x00, 0x00, 0x2f, 0x00, 0x00, // !
-  0x00, 0x07, 0x00, 0x07, 0x00, // "
-  0x14, 0x7f, 0x14, 0x7f, 0x14, // #
-  //0x2e, 0x2a, 0x7f, 0x2a, 0x3a, // $
-  0x10, 0x7f, 0x01, 0x01, 0x01, // $ squareroot
-  0x62, 0x64, 0x08, 0x13, 0x23, // %
-  0x36, 0x49, 0x55, 0x22, 0x50, // &
-  //0x00, 0x07, 0x03, 0x00, 0x00, // '
-  0x00, 0x1b, 0x04, 0x1b, 0x00, // ' raised x
-  0x00, 0x1c, 0x22, 0x41, 0x00, // (
-  0x00, 0x41, 0x22, 0x1c, 0x00, // )
-  0x14, 0x08, 0x3E, 0x08, 0x14, // *
-  0x08, 0x08, 0x3E, 0x08, 0x08, // +
-  0x00, 0x00, 0xe0, 0x60, 0x00, // ,
+  /*0x00, 0x00, 0x00, 0x00, 0x00, // space // No ascii signs below 44 (',') to save memory (flash)
+    0x00, 0x00, 0x2f, 0x00, 0x00, // !
+    0x00, 0x07, 0x00, 0x07, 0x00, // "
+    0x14, 0x7f, 0x14, 0x7f, 0x14, // #
+    0x2e, 0x2a, 0x7f, 0x2a, 0x3a, // $
+    0x62, 0x64, 0x08, 0x13, 0x23, // %
+    0x36, 0x49, 0x55, 0x22, 0x50, // &
+    0x00, 0x07, 0x03, 0x00, 0x00, // '
+    0x00, 0x1c, 0x22, 0x41, 0x00, // (
+    0x00, 0x41, 0x22, 0x1c, 0x00, // )
+    0x14, 0x08, 0x3E, 0x08, 0x14, // *
+    0x08, 0x08, 0x3E, 0x08, 0x08, // + */
+  //0x00, 0x00, 0xe0, 0x60, 0x00, // ,
+  0x10, 0x7f, 0x01, 0x01, 0x01, // , squareroot
   0x08, 0x08, 0x08, 0x08, 0x08, // -
   0x00, 0x60, 0x60, 0x00, 0x00, // .
   0x20, 0x10, 0x08, 0x04, 0x02, // /
-  //0x7f, 0x41, 0x49, 0x41, 0x7f, // 0
-  0x7f, 0x41, 0x41, 0x41, 0x7f, // 0 no dot
+  0x7f, 0x41, 0x41, 0x41, 0x7f, // 0
   0x00, 0x00, 0x02, 0x7f, 0x00, // 1
   0x79, 0x49, 0x49, 0x49, 0x4f, // 2
   0x41, 0x49, 0x49, 0x49, 0x7f, // 3
@@ -190,15 +827,20 @@ const byte font [] PROGMEM = { // Edged font
   0x03, 0x01, 0x01, 0x01, 0x7f, // 7
   0x7f, 0x49, 0x49, 0x49, 0x7f, // 8
   0x4f, 0x49, 0x49, 0x49, 0x7f, // 9
-  0x00, 0x36, 0x36, 0x00, 0x00, // :
-  0x00, 0x76, 0x36, 0x00, 0x00, // ;
-  0x08, 0x14, 0x22, 0x41, 0x00, // <
-  0x14, 0x14, 0x14, 0x14, 0x14, // =
+  //0x00, 0x36, 0x36, 0x00, 0x00, // :
+  0x00, 0x00, 0x00, 0x00, 0x00, // : space
+  //0x00, 0x76, 0x36, 0x00, 0x00, // ;
+  0x00, 0x1b, 0x04, 0x1b, 0x00, // ; raised x
+  //0x08, 0x14, 0x22, 0x41, 0x00, // <
+  0x00, 0x7f, 0x3e, 0x1c, 0x08, // < play
+  //0x14, 0x14, 0x14, 0x14, 0x14, // =
+  0x04, 0xbe, 0xbf, 0xbe, 0x04, // = shift sign
   //0x00, 0x41, 0x22, 0x14, 0x08, // >
   0x08, 0x08, 0x3e, 0x1c, 0x08, // > arrow to right
-  0x03, 0x01, 0x59, 0x09, 0x0f, // ?
+  //0x03, 0x01, 0x59, 0x09, 0x0f, // ?
+  0x00, 0x00, 0x2f, 0x00, 0x00, // ? !
   //0x7b, 0x49, 0x79, 0x41, 0x7f, // @
-  0x04, 0xbe, 0xbf, 0xbe, 0x04, // @ shift sign
+  0x1c, 0x3e, 0x3e, 0x3e, 0x1c, // @ record
   0x7f, 0x09, 0x09, 0x09, 0x7f, // A
   0x7f, 0x49, 0x49, 0x4f, 0x78, // B
   0x7f, 0x41, 0x41, 0x41, 0x40, // C
@@ -213,7 +855,7 @@ const byte font [] PROGMEM = { // Edged font
   0x7F, 0x40, 0x40, 0x40, 0x40, // L
   0x7F, 0x01, 0x07, 0x01, 0x7F, // M
   0x7F, 0x01, 0x7f, 0x40, 0x7F, // N
-  0x7f, 0x41, 0x41, 0x41, 0x7f, // =
+  0x7f, 0x41, 0x41, 0x41, 0x7f, // O
   0x7F, 0x09, 0x09, 0x09, 0x0f, // P
   0x7f, 0x41, 0x71, 0x41, 0x7f, // Q
   0x7F, 0x09, 0x09, 0x79, 0x4f, // R
@@ -287,6 +929,7 @@ static const byte inits [] PROGMEM = { // Initialization sequence
   0xDA, 0x02, // COM config pin mapping:            right/left left/right
   //          //                         sequential     02        22
   //          //                         alternate      12        32
+  0x20, 0x00, // Horizontal addressing mode (line feed after EOL)
   0x8D, 0x14  // Charge pump (0x14 enable or 0x10 disable)
 };
 
@@ -340,7 +983,7 @@ static void dswap(void) { // Swap GDDRAM to other half and render
   drender();
 }
 
-static void displayinit(void) { // Run initialization sequence
+static void dinit(void) { // Run initialization sequence
   dbegin();
   dsendstart();
   dsendbyte(DISPLAY_COMMAND);
@@ -366,7 +1009,7 @@ void dcontrast(byte contrast) { // Set contrast
 static void dsetcursor(byte x, byte y) { // Set cursor to position (x|y)
   dsendcmdstart();
   dsendbyte(renderram | (y & 0x07));
-  dsendbyte(0x10 | ((x & 0xf0) >> 4));
+  dsendbyte(0x10 | (x >> 4));
   dsendbyte(x & 0x0f);
   dsendstop();
   dx = x;
@@ -374,12 +1017,10 @@ static void dsetcursor(byte x, byte y) { // Set cursor to position (x|y)
 }
 
 static void dfill(byte b) { // Fill screen with byte/pattern b
-  for (byte i = 0; i < DISPLAY_PAGES; i++) {
-    dsetcursor(0, i);
-    dsenddatastart();
-    for (byte j = 0; j < SCREENWIDTH; j++) dsenddatabyte(b);
-    dsendstop();
-  }
+  dsetcursor(0, 0);
+  dsenddatastart();
+  for (int i = 0; i < SCREENWIDTH * DISPLAY_PAGES; i++) dsenddatabyte(b);
+  dsendstop();
 }
 
 
@@ -387,6 +1028,7 @@ static void dfill(byte b) { // Fill screen with byte/pattern b
 
 // DEFINES
 #define KPIN 3  // Pin to read analog keyboard  (H2 = D3)
+#define BITEXP 0x01
 
 // Keychars
 #define KEY_1 '?' // SHIFT    1-?  2-7  3-8  4-9
@@ -414,7 +1056,7 @@ static byte getkeycode(void) { // Returns key character due to analog value
   int b = getbutton();
   const byte keys[] = {KEY_16, KEY_15, KEY_14, KEY_13, KEY_12, KEY_11, KEY_10, KEY_9, KEY_8, KEY_7, KEY_6, KEY_5, KEY_4, KEY_3, KEY_2, KEY_1};
   if (b < 231)return (NULL); // No key pressed
-  else return (keys[(byte)(_sqrtcalc(b / 2 - 235) - 1)]); // Approximate keys with quadratic function
+  else return (keys[(byte)(_exp_sin_asin(0.5 * log(b / 2 - 235), BITEXP) - 1)]); // Approximate keys with quadratic function
   /*if (b < 231)return (NULL); // No key pressed
     else if (b < 470) return (KEY_16);
     else if (b < 488) return (KEY_15);
@@ -434,24 +1076,20 @@ static byte getkeycode(void) { // Returns key character due to analog value
     else return (KEY_1);*/
 }
 
-static byte getkey(void) { // Returns one debounced key - no key repeat
-  static byte oldkey = NULL; // Needed for debouncing
-  byte key1 = getkeycode(), key2 = NULL;
-  if (key1 != oldkey) key2 = getkeycode();
-  if (key1 == key2) return (oldkey = key1);
-  return (NULL);
-}
-
 
 // *****  S Y S T E M
 
 // DEFINES
 #define FRAMERATE 10 // Maximal number of screen refreshes per second (>3)
+#define SIZES 0x01 // Printing size
+#define SIZEM 0x02 // Printing size
+#define SIZEL 0x04 // Printing size
 
 
 // VARIABLES
 static byte eachframemillis, thisframestart, lastframedurationms; // Framing times
 static boolean justrendered; // True if frame was just rendered
+static byte printbitshift = 0; // Shifts printed character down
 
 
 // SUBPROGRAMS
@@ -468,9 +1106,8 @@ static byte expand2bit(byte b) { // Expand 2 bits 000000ab
 }
 
 static void delayshort(byte ms) { // Delay (with timer) in ms with 8 bit duration
-  //delay((unsigned long) ms);
   long t = millis();
-  while (millis() - t < ms) ;
+  while ((byte)(millis() - t) < ms) ;
 }
 
 static void printc(byte c, byte w, byte h) { // Print char c with width and height (1, 2 or 4)
@@ -481,10 +1118,10 @@ static void printc(byte c, byte w, byte h) { // Print char c with width and heig
       dy++; // Increment y position/page
       dsetcursor(dx, dy);
     }
-    for (byte j = 0; j < FONTWIDTH; j++) {
-      byte tmp = pgm_read_byte(&font[FONTWIDTH * (c - FONTOFFSET) + j]); // Fontbyte
-      if (h == 2)      tmp = expand4bit((tmp >> (k * 4)) & 0x0f); // Expand 0000abcd
-      else if (h == 4) tmp = expand2bit((tmp >> (k * 2)) & 0x03); // Expand 000000ab
+    for (byte j = 0; j < FONTWIDTH; j++) { // Fontbyte - shifted one pixel down (if applicable)
+      byte tmp = pgm_read_byte(&font[FONTWIDTH * (c - FONTOFFSET) + j]) << printbitshift; // Fontbyte
+      if (h == SIZEM)      tmp = expand4bit((tmp >> (k * 4)) & 0x0f); // Expand 0000abcd
+      else if (h == SIZEL) tmp = expand2bit((tmp >> (k * 2)) & 0x03); // Expand 000000ab
       dsenddatastart();
       for (byte i = 0; i < w; i++) dsenddatabyte(tmp);
       dsendstop();
@@ -497,7 +1134,7 @@ static void printcat(byte c, byte w, byte h, byte x, byte y) { // Print sized ch
   printc(c, w, h);
 }
 
-static void prints(char * s, byte w, byte h) { // Print string with page size 1,2 or 4
+static void prints(char * s, byte w, byte h) { // Print string
   byte tmpx = dx, tmpy = dy;
   for (byte i = 0; i < strlen(s); i++) printcat(s[i], w, h, tmpx + i * (FONTWIDTH + 1) * w, tmpy);
 }
@@ -565,6 +1202,9 @@ static boolean nextframe(void) { // Wait (idle) for next frame
 // ***** A P P L I C A T I O N
 
 // DEFINES
+#define CHARSPACE ':' // Character for space symbol
+#define CHARSHIFT '=' // Character for shift symbol
+#define CHARREC '@' // Character for recording symbol
 #define POWEROFFTIME 30 // Time for auto poweroff in s
 #define DISPLAYOFFTIME 20 // Time for auto displayoff in s
 #define DIMTIME 10 // Time for auto displaydim in s
@@ -574,14 +1214,20 @@ static boolean nextframe(void) { // Wait (idle) for next frame
 #define RAD 57.29578 // 180/PI
 #define MAXITERATE 100 // Maximal number of Taylor series loops to iterate
 #define FKEYNR 3 // 3 function keys
+#define KEY_DUMMY 0xff // Needed to enter key-loop and printstring
 #define EECONTRAST 0 // EEPROM address of brightness (1 byte)
 #define EESTACK 1 // EEPROM address of stack ((4+1)*4 bytes)
 #define EECMDKEY 21 // EEPROM address of command keys (10 bytes)
 #define EECONST 31 // EEPROM address of constants (10*4 bytes)
-#define KEY_DUMMY 0xff // Needed to enter key-loop and printstring
 #define EEREC 71 // EEPROM address Starting EE-address for saving "type recorder"
-#define MAXREC 73 // Number of record steps per slot
-#define MAXRECSLOT 6 // Maximal slots to record
+#define MAXREC 146 // Number of record steps per slot
+//#define EECONST 61 // EEPROM address of constants (10*4 bytes)
+//#define EEREC 101 // EEPROM address Starting EE-address for saving "type recorder"
+//#define MAXREC 136 // Number of record steps per slot
+#define MAXRECSLOT 3 // Maximal slots to record
+#define BITEXP 1 // Bit for exp()
+#define BITSIN 2 // Bit for sin()
+#define BITASIN 4 // Bit for asin
 
 // Macros
 #define _abs(x) ((x<0)?(-x):(x)) // abs()-substitute macro
@@ -593,45 +1239,41 @@ static boolean nextframe(void) { // Wait (idle) for next frame
 
 // VARIABLES
 static byte key; // Holds entered key
+static byte oldkey; // Old key - use for debouncing
 static char sbuf[MAXSTRBUF]; // Holds string to print
 static double stack[STACKSIZE]; // Float stack (XYZT) and memory
-static boolean isnewnumber; // True if stack has to be lifted before entering a new number
-static boolean ispushed; // True if stack was already pushed by ENTER
-static byte decimals; // Number of decimals entered - used for input after decimal dot
-static boolean isdot; // True if dot was pressed and decimals will be entered
-static boolean isf; // true if f is pressed
-static boolean ismenu; // True if menu demanded
-static byte select; // Selection number or playstring position
-static boolean isplaystring; // True if string should be played
+static boolean isnewnumber = true; // True if stack has to be lifted before entering a new number
+static boolean ispushed = false; // True if stack was already pushed by ENTER
+static byte decimals = 0; // Number of decimals entered - used for input after decimal dot
+static boolean isdot = false; // True if dot was pressed and decimals will be entered
+static boolean isf = false; // true if f is pressed
+static boolean ismenu = false; // True if menu demanded
+static byte select = 0; // Selection number or playstring position
+static boolean isplaystring = false; // True if string should be played
 static byte brightness; // Contrast
-static boolean isfirstrun; // Allows first run of loop and printscreen without key query
-static long timestamp; // Needed for timing of power manangement
-/*static int recptr = 0; // Pointer to recording step
-  static byte recslot = 0; // Slot number for recording to EEPROM
-  static boolean isrec = false, isplay = false; // True, if "Type Recorder" records or plays
-*/
-/*static double sx = 0.0, sxx = 0.0, sy = 0.0, sxy = 0.0; // Statistical/LR variables
-  static byte sn = 0;
-*/
+static boolean isfirstrun = true; // Allows first run of loop and printscreen without key query
+static long timestamp = 0; // Needed for timing of power manangement
+static int recptr = 0; // Pointer to recording step
+static byte recslot = 0; // Slot number for recording to EEPROM
+static boolean isrec = false, isplay = false; // True, if "Type Recorder" records or plays
+static double sum[STACKSIZE] = {0.0, 0.0, 0.0, 0.0, 0.0}; // Memory to save statistic sums
+static double shadow[STACKSIZE] = {0.0, 0.0, 0.0, 0.0, 0.0}; // Shadow memory (buffer) for stack
+static byte restore; // Position of stack salvation (including mem)
 
-// MESSAGES
-#define MSGRUN 0
-const char m0[] PROGMEM = "RUN"; //
-const char* const msg_table[] PROGMEM = {m0,};
 
 // COMMANDS
-const char c0[] PROGMEM = "$X";   // Squareroot
-const char c1[] PROGMEM = "Y'";   // Raise to the power of
+const char c0[] PROGMEM = ",X";   // Squareroot
+const char c1[] PROGMEM = "Y;";   // Raise to the power of
 const char c2[] PROGMEM = "1/X";  // Reciprocal
 const char c3[] PROGMEM = "EXP";  // Exponential
 const char c4[] PROGMEM = "LN";   // Natural logarithm
-const char c5[] PROGMEM = "!";    // Gamma function (due to Nemes)
+const char c5[] PROGMEM = "?";    // Gamma function (due to Nemes)
 const char c6[] PROGMEM = ">P";   // Rectangular to polar coordinates
 const char c7[] PROGMEM = ">R";   // Polar to rectangular coordinates
 const char c8[] PROGMEM = "PV";   // Present value (annuity)
 const char c9[] PROGMEM = "ND";   // Normal distribution (CDF/PDF)
-const char c10[] PROGMEM = "CST"; // Set constant key
-const char c11[] PROGMEM = "CMD"; // Set command key
+const char c10[] PROGMEM = "STA"; // Statistics
+const char c11[] PROGMEM = "LR";  // Linear regression
 const char c12[] PROGMEM = "SIN"; // Sine
 const char c13[] PROGMEM = "COS"; // Cosine
 const char c14[] PROGMEM = "TAN"; // Tangent
@@ -644,15 +1286,18 @@ const char c20[] PROGMEM = "TNH"; // Hyperbolic tangent
 const char c21[] PROGMEM = "ASH"; // Inverse hyperbolic sine
 const char c22[] PROGMEM = "ACH"; // Inverse hyperbolic cosine
 const char c23[] PROGMEM = "ATH"; // Inverse hyperbolic tangent
-const char c24[] PROGMEM = "U3"; //  ... USR recorded functions
-const char c25[] PROGMEM = "U4"; //
-const char c26[] PROGMEM = "U5"; //
-const char c27[] PROGMEM = "U1"; //
-const char c28[] PROGMEM = "U2"; //
-const char c29[] PROGMEM = "U3"; //
+const char c24[] PROGMEM = "CST"; // Set constant key
+const char c25[] PROGMEM = "CMD"; // Set command key
+const char c26[] PROGMEM = "LIT"; // Set contrast/brightness
+const char c27[] PROGMEM = "@1"; //  ... Record user keys
+const char c28[] PROGMEM = "@2"; //
+const char c29[] PROGMEM = "@3"; //
+const char c30[] PROGMEM = "<1"; //  ... Play user keys
+const char c31[] PROGMEM = "<2"; //
+const char c32[] PROGMEM = "<3"; //
 const char* const cmd[] PROGMEM = {
   c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, c20,
-  c21, c22, c23, c24, c25, c26, c27, c28, c29
+  c21, c22, c23, c24, c25, c26, c27, c28, c29, c30, c31, c32
 };
 #define numberofcommands (sizeof(cmd)/sizeof(const char *))
 
@@ -660,85 +1305,65 @@ const char* const cmd[] PROGMEM = {
 // PLAYSTRINGS (Don't play a playstring!)
 #define PSCOS 0
 #define PSTAN 1
-#define PSASIN 2
-#define PSACOS 3
-#define PSND 4
-#define PSR2P 5
-#define PSP2R 6
-#define PSPV 7
-#define PSGAMMA 8
-#define PSSINH 9
-#define PSCOSH 10
-#define PSTANH 11
-#define PSASINH 12
-#define PSACOSH 13
-#define PSATANH 14
-const char s0[] PROGMEM = "[=E>1LO"; // COS: SIN ENTER * CHS 1 + SQRT
-const char s1[] PROGMEM = "=[=E>1LOK[KH"; // TAN: ENTER COS SWAP SIN SWAP /
-const char s2[] PROGMEM = "==E>1LOQE`"; // ASIN: ENTER ENTER * CHS 1 + SQRT INV * ATAN
-const char s3[] PROGMEM = "==E>1LOQE`>90L"; // ACOS: ASIN CHS 90 +
-const char s4[] PROGMEM = "===EE:07E>K1:6E>LR1LQK=E>2HR:3989423E"; // ND:
-// GAUSS-CDF: ENTER ENTER ENTER * * .07 * CHS SWAP 1.6 * CHS + EXP 1 + INV
-//            SWAP
-//       PDF: ENTER * CHS 2 / EXP 0.3989423 *
-const char s5[] PROGMEM = "=MMKM=MKH`MMEMMELO"; // R2P: ENTER ROT ROT SWAP ROT ENTER ROT SWAP / ATAN ROT ROT * ROT ROT * + SQRT
-const char s6[] PROGMEM = "K[==E>1LOMEMEKM"; // P2R: SWAP SIN ENTER ENTER * CHS 1 + SQRT ROT * ROT * SWAP ROT
-const char s7[] PROGMEM = ">K=1LKMKP>1LMMMH"; // PV: CHS SWAP ENTER 1 + SWAP ROT SWAP PWR CHS 1 + ROT ROT ROT /
-const char s8[] PROGMEM = "1L==QR=Q>L2HEK6P810EQLSE2HK>LMMSK:5BEL:9189385LR";
-// GAMMA: 1 + ENTER ENTER INV EXP ENTER INV CHS + 2 / * SWAP 6 PWR 810 * INV + LN * 2 /
-// SWAP CHS + ROT ROT LN SWAP .5 - * + .9189385 + EXP
-const char s9[] PROGMEM = "==RK>RB2H"; // SINH: ENTER ENTER EXP SWAP CHS EXP - 2 /
-const char s10[] PROGMEM = "==RK>RL2H"; // COSH: ENTER ENTER EXP SWAP CHS EXP + 2 /
-const char s11[] PROGMEM = "2E>R=>1LK1LH"; // TANH: 2 * CHS EXP ENTER CHS 1 + SWAP 1 + /
-const char s12[] PROGMEM = "==E1LOLS"; // ASINH: ENTER ENTER * 1 + SQRT + LN
-const char s13[] PROGMEM = "==E1BOLS"; // ACOSH: ENTER ENTER * 1 - SQRT + LN
-const char s14[] PROGMEM = "==1LK>1LHOS"; // ATANH: ENTER ENTER 1 + SWAP CHS 1 + / SQRT LN
-const char* const pstable[] PROGMEM = {s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14};
-char playbuf[50]; // Holds sii[]
-/* Commands and corresponding ascii characters
-
-     <--------  numbers -------->  DOT CLX EE ENTER CHS CONTR
-  c  0  1  2  3  4  5  6  7  8  9  :   ;   <  =     >   ?
-  #                                01  02  03 04    05  06
-  a  48 49 50 51 52 53 54 55 56 57 58  59  60 61    62  63
-
-     RCL STO SUB n  CMD MULT MENU n  DIV BATT SLEEP SWAP ADD ROT n  SQRT
-  c  @   A   B   C  D   E    F    G  H   I    J     K    L   M   N  O
-  #  07  08  09  10 11  12   13   14 15  16   17    18   19  20  21 22
-  a  64  65  66  67 68  69   70   71 72  73   74    75   76  77  78 79
-
-     POW INV EXP LN GAMMA R2P P2R PV ND SETCONST SETCMD SIN COS TAN ASIN ACOS
-  c  P   Q   R   S  T     U   V   W  X  Y        Z      [   \   ]   ^    _
-  #  23  24  25  26 27    28  29  30 31 32       33     34  35  36  37   38
-  a  80  81  82  83 84    85  86  87 88 89       90     91  92  93  94   95
-
-     ATAN SINH COSH TANH ASINH ACOSH ATANH
-  c  `    a    b    c    d     e     f     g h i j k l m n o
-  #  39   40   41   42   43    44    45
-  a  96   97   98   99   100   101   102
-
-     p q r s t u v w x y z { | } ~
-*/
-
+#define PSACOS 2
+#define PSATAN 3
+#define PSPV 4
+#define PSGAMMA 5
+#define PSSINH 6
+#define PSCOSH 7
+#define PSTANH 8
+#define PSASINH 9
+#define PSACOSH 10
+#define PSATANH 11
+#define PSSUM 12
+#define RESTORE2 13 // Leave stack[0] and stack[1] unchanged when salvaging from shadow[]
+#define PSND 13
+#define PSR2P 14
+#define PSP2R 15
+#define PSSTAT 16
+#define PSLR 17
+const char s0[] PROGMEM = ">90L["; // COS
+const char s1[] PROGMEM = "[==E>1LOH"; // TAN
+const char s2[] PROGMEM = "^>90L"; // ACOS
+const char s3[] PROGMEM = "===E1LOQE^"; // ATAN
+const char s4[] PROGMEM = ">I=1LIMIP>1LKH"; // PV
+const char s5[] PROGMEM = "1L===12EI10EQBQL1RHIP2:506628KOHE"; // GAMMA
+const char s6[] PROGMEM = "R=Q>L2H"; // SINH
+const char s7[] PROGMEM = "R=QL2H"; // COSH
+const char s8[] PROGMEM = "2ER1B=2LH"; // TANH
+const char s9[] PROGMEM = "==E1LOLS"; // ASINH
+const char s10[] PROGMEM = "==E1BOLS"; // ACOSH
+const char s11[] PROGMEM = "==1LI>1LHOS"; // ATANH
+const char s12[] PROGMEM = "1AM==EMEMIOp"; // SUM+
+const char s13[] PROGMEM = "===EE:07E>I1:6EBR1LQI=E>2HR:3989423E"; // ND
+const char s14[] PROGMEM = "=EI==MELO=MH^K"; // R2P
+const char s15[] PROGMEM = "I[==E>1LOMEMEIM"; // P2R
+const char s16[] PROGMEM = "IM=@H=ME>L@1BHOI"; // STAT
+//const char s17[] PROGMEM = "I2H>==EIMIBOMM=K=MIMBMLIM"; // QE
+const char s17[] PROGMEM = "qEI@EK@EKrq=EsIMBMBKH===rqtKEB@HI"; // L.R.
+const char* const pstable[] PROGMEM = {s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17};
+char playbuf[40]; // Holds sii[]
 
 // Function pointer array/table
 static void (*dispatch[])(void) = {
   &_numinput, // Normal calculator keys (dispatch 0)     OFFSET: 0
   &_nop, &_ceclx, &_ee, &_enter, &_chs, // 1d:15 2c;13 3e<5 4x=16 5s>9 (no 6f?1)
-  &_contrast, &_rcl, &_sto, &_sub, // Shiftkeys 0 1 2 3  OFFSET: 6
+  &_batt, &_rcl, &_sto, &_sub, // Shiftkeys 0 1 2 3  OFFSET: 6
   &_const, &_cmdkey, &_mult, &_menu, //         4 5 6 7
-  &_nop, &_div, &_batt, &_sleep, //             8 9 d c
-  &_swap, &_add, &_rot, &_nop, //               e x s f
-  &_sqrt, &_pow, &_inv, // MENU                          OFFSET: 22
+  &_sum, &_div, &_swap, &_sleep, //             8 9 d c
+  &_rotup, &_add, &_rot, &_nop, //              e x s f
+  &_sqrt, &_pow, &_inv, // MENU                          OFFSET: 21 //22
   &_exp, &_ln, &_gamma, // Mathematical functions and settings
   &_r2p, &_p2r, &_pv,
-  &_nd, &_setconst, &_setcmdkey,
+  &_nd, &_stat, &_lr,
   &_sin, &_cos, &_tan, // Trigonometrical functions
   &_asin, &_acos, &_atan,
   &_sinh, &_cosh, &_tanh, // Hyperbolical functions
   &_asinh, &_acosh, &_atanh,
-  &_nop, &_nop, &_nop, // User defineable Menukeys       OFFSET: 46
-  &_nop, &_nop, &_nop,
+  &_setconst, &_setcmdkey, &_contrast, // Settings
+  &_rec, &_rec, &_rec, // User definable Menukeys       OFFSET: 48 //49
+  &_play, &_play, &_play,
+  &_sum1, &_sum2stack, &_shadowsave, &_shadowload1, &_shadowload2// Hidden links
 };
 
 // Function pointer array subroutines
@@ -753,13 +1378,13 @@ static void _acosh(void) { // ACOSH
   _playstring(PSACOSH);
 }
 static void _asin(void) { // ASIN
-  _playstring(PSASIN);
+  stack[0] = _exp_sin_asin(stack[0], BITASIN) * RAD;
 }
 static void _asinh(void) { // ASINH
   _playstring(PSASINH);
 }
 static void _atan(void) { // ATAN
-  stack[0] = atan(stack[0]) * RAD;
+  _playstring(PSATAN);
 }
 static void _atanh(void) { // ATANH
   _playstring(PSATANH);
@@ -767,16 +1392,18 @@ static void _atanh(void) { // ATANH
 static void _batt(void) { // BATT
   _push();
   ADMUX = _BV(MUX3) | _BV(MUX2); // Set voltage bits for ATTINY85
-  delayshort(5); // Settle Vref
+  delayshort(10); // Settle Vref
   ADCSRA |= _BV(ADSC);
   while (bit_is_set(ADCSRA, ADSC)) ; // Measuring
-  byte low = ADCL, high = ADCH;
-  stack[0] = 1125.3 / ((high << 8) | low); // Calculate Vcc in V - 1125.3 = 1.1 * 1023
+  byte high = ADCH;
+  stack[0] = 1125.3 / ((high << 8) | ADCL); // Calculate Vcc in V - 1125.3 = 1.1 * 1023
 }
 static void _ce(void) { // CE
   if (isdot) {
-    if (stack[0] > TINYNUMBER && decimals > 0)
-      stack[0] -= ((long)(stack[0] * _pow10(decimals)) % 10) / _pow10(decimals--);
+    if (stack[0] > TINYNUMBER && decimals > 0) {
+      decimals--;
+      stack[0] = (long)(stack[0] * _pow10(decimals)) / _pow10(decimals);
+    }
     else isdot = false;
   }
   else stack[0] = (long)(stack[0] / 10);
@@ -818,13 +1445,7 @@ static void _div(void) { // DIV /
 }
 static void _dot(void) { // DOT .
   if (!isf) {
-    if (isnewnumber) { // Enable starting new number with .
-      if (ispushed) ispushed = false;
-      else _push();
-      stack[0] = 0.0;
-      decimals = 0;
-      isnewnumber = false;
-    }
+    _newnumber();
     isdot = true;
   }
 }
@@ -835,28 +1456,22 @@ static void _ee(void) { // EE
 }
 static void _enter(void) { // ENTER
   _push();
-  ispushed = true;
-  isnewnumber = true;
+  ispushed = isnewnumber = true;
 }
 static void _exp(void) {  // EXP
-  stack[0] = _exp_sin(stack[0], true);
+  stack[0] = _exp_sin_asin(stack[0], BITEXP);
 }
 static void _gamma(void) { // GAMMA
   _playstring(PSGAMMA);
 }
-static void _invpos(void) { // INV+
-  _ln();
-  _chs();
-  _exp();
-}
 static void _inv(void) { // INV
   stack[0] = 1 / stack[0];
-  /*_ln();
-    _chs();
-    _exp();*/
 }
 static void _ln(void) { // LN
   stack[0] = log(stack[0]);
+}
+static void _lr(void) { // L.R.
+  _playstring(PSLR);
 }
 static void _menu(void) { // MENU
   ismenu = true;
@@ -869,27 +1484,43 @@ static void _mult(void) { // MULT *
 static void _nd(void) { // ND
   _playstring(PSND);
 }
-static void _nop(void) {} // NOP - no operation
-static void _numinput(void) { // NUM Numeric input (0...9)
+static void _newnumber(void) { // NEW number
   if (isnewnumber) { // New number
-    if (ispushed) ispushed = false;
-    else _push();
+    //if (ispushed) ispushed = false;
+    //else _push();
+    if (!ispushed) _push();
     stack[0] = 0.0;
     decimals = 0;
     isdot = isnewnumber = false;
   }
+}
+static void _nop(void) {} // NOP - no operation
+static void _numinput(void) { // NUM Numeric input (0...9)
+  _newnumber();
   if (isdot) stack[0] += (key - KEY_14) / _pow10(++decimals); // Append decimal to number
-  else stack[0] = stack[0] * 10 + key - KEY_14; // Append digit to number
+  else { // Append digit to number
+    stack[0] *= 10;
+    stack[0] += key - KEY_14;
+  }
 }
 static void _p2r(void) { // P2R
   _playstring(PSP2R);
 }
+static void _recplay(void) { // Prepare variables for REC or PLAY
+  recslot = key - KEY_2;
+  recptr = EEREC + recslot * MAXREC;
+}
+static void _play(void) { // PLAY
+  _recplay();
+  isplay = isnewnumber = true;
+}
 static void _playstring(byte slot) {  // PLAYSTRING
+  restore = slot >= RESTORE2 ? 2 : 1;
+  _shadowsave(); // Save stack for salvation
   strcpy_P(playbuf, (char*)pgm_read_word(&(pstable[slot]))); // Copy playstring to buffer
   select = 0;
-  isnewnumber = true;
+  isnewnumber = isplaystring = true;
   ispushed = isdot = false;
-  isplaystring = true;
 }
 static double _pow(void) { // POW
   _swap();
@@ -898,18 +1529,16 @@ static double _pow(void) { // POW
   _exp();
 }
 static double _pow10(int8_t e) { // POW10 10^x
-  boolean ne = (e < 0);
   double f = 1.0;
-  if (ne) while (e++)  f *= 10;
-  else while (e--)  f *= 10;
-  if (ne) f = 1 / f;
+  if (e > 0) while (e--) f *= 10;
+  else while (e++) f /= 10;
   return (f);
 }
 void _pull(void) { // PULL
-  memmove(&stack[0], &stack[1], 3 * sizeof(double));
+  memcpy(&stack[0], &stack[1], (STACKSIZE - 2) * sizeof(double));
 }
 static void _pullupper(void) { // PULLUPPER
-  memmove(&stack[1], &stack[2], 2 * sizeof(double));
+  memcpy(&stack[1], &stack[2], (STACKSIZE - 3) * sizeof(double));
 }
 static void _push(void) { // PUSH
   memmove(&stack[1], &stack[0], (STACKSIZE - 2) * sizeof(double));
@@ -917,68 +1546,86 @@ static void _push(void) { // PUSH
 static void _pv(void) { // PV
   _playstring(PSPV);
 }
+/*static void _qe(void) { // QE
+  _playstring(PSQE);
+  }*/
 static void _r2p(void) { // R2P
   _playstring(PSR2P);
 }
-static void _rec(void) { // REC
-  /*if (isrec) isrec = isplay = false; // Stop isplay too - if play was recorded
-    else {
-    recslot = (int)(_abs(stack[0])) - 1; // -1 to convert user's 1234-mind to 0123-slots
-    if (recslot < MAXRECSLOT) {
-      _pull();
-      recptr = recslot * MAXREC;
-      isrec = true;
-    }
-    }*/
-}
 static void _rcl(void) { // RCL
   _push();
-  stack[0] = stack[4];
+  stack[0] = stack[STACKSIZE - 1];
+}
+static void _rec(void) { // REC
+  _recplay();
+  isrec = true;
+}
+static void _rotup(void) { // ROTup
+  for (byte i = 0; i < STACKSIZE - 2; i++) _rot();
 }
 static void _rot(void) { // ROT
   double tmp = stack[0];
   _pull();
-  stack[3] = tmp;
+  stack[STACKSIZE - 2] = tmp;
 }
 static void _setcmdkey(void) { // SETCMDKEY
-  if (is09) EEPROM.write(EECMDKEY + stack[0], (byte)stack[1]);
+  if (is09) EEPROM.write(EECMDKEY + (byte)stack[0], (byte)stack[1]);
 }
 static void _setconst(void) { // SETCONST
-  if (is09) EEPROM.put(EECONST + stack[0], stack[1]);
+  if (is09) EEPROM.put(EECONST + (byte)stack[0], stack[1]);
+}
+static void _shadowsave(void) { // Save stack to shadow buffer (including mem)
+  memcpy(shadow, stack, STACKSIZE * sizeof(double));
+}
+static void _shadowload1(void) { // Load stack from shadow buffer from pos 1
+  _shadowload(1);
+}
+static void _shadowload2(void) { // Load stack from shadow buffer from pos 2
+  _shadowload(2);
+}
+static void _shadowload(byte pos) { // Load higher stack from shadow buffer
+  memcpy(&stack[pos], &shadow[pos], (STACKSIZE - pos)*sizeof(double));
 }
 static void _sin(void) {  // SIN
-  stack[0] = _exp_sin(stack[0] / RAD, false);
+  stack[0] = _exp_sin_asin(stack[0] / RAD, BITSIN);
 }
 static void _sinh(void) {  // SINH
   _playstring(PSSINH);
 }
 static void _sleep(void) { // SLEEP
-  EEPROM.write(EECONTRAST, brightness); // Save brightness to EEPROM
-  for (byte i = 0; i < STACKSIZE; i++) // Save stack to EEPROM
-    EEPROM.put(EESTACK + i * sizeof(double), stack[i]);
+  EEPROM[EECONTRAST] = brightness; // Save brightness to EEPROM
+  savestack();
   sleep();
 }
-static double _sqrtcalc(double f) { // Calculating square root without using sqrt()
-  return (_exp_sin(0.5 * log(f), true));
-}
 static void _sqrt(void) { // SQRT
-  stack[0] = _sqrtcalc(stack[0]);
+  if (stack[0] != 0.0) {
+    _ln();
+    stack[0] *= 0.5;
+    _exp();
+  }
+}
+static void _stat(void) { // STAT
+  _sum2stack();
+  _playstring(PSSTAT);
 }
 static void _sto(void) { // STO
-  stack[4] = stack[0];
+  stack[STACKSIZE - 1] = stack[0];
 }
 static void _sub(void) { // SUB -
   stack[0] = stack[1] - stack[0];
   _pullupper();
 }
-/*static void _sum(void) { // SUM
-  double f0 = stack[0], f1 = stack[1];
-  sx += f0;
-  sy += f1;
-  sxx += f0 * f0;
-  sxy += f0 * f1;
-  stack[0] = ++sn;
-  }*/
+static void _sum(void) { // SUM
+  _playstring(PSSUM);
+}
+static void _sum1(void) { // SUM addon
+  for (byte i = 0; i < STACKSIZE; i++) sum[i] += stack[i];
+  _sum2stack(); // Show n
+  _rcl();
+}
+static void _sum2stack(void) { // Copies sum[] to stack[] (including mem)
+  memmove(stack, sum, STACKSIZE * sizeof(double));
+}
 static void _swap(void) { // SWAP
   double tmp = stack[0];
   stack[0] = stack[1];
@@ -993,95 +1640,208 @@ static void _tanh(void) { // TANH
 
 
 // SUBROUTINES
+
+static void savestack(void) { // Save whole stack to EEPROM
+  byte *p = (byte *)stack;
+  for (byte i = 0; i < STACKSIZE * sizeof(double); i++) EEPROM[EESTACK + i] = *p++;
+}
+static void loadstack(void) { // Load whole stack from EEMPROM
+  byte *p = (byte *)stack;
+  for (byte i = 0; i < sizeof(double)*STACKSIZE; i++) *p++ = EEPROM[EESTACK + i];
+}
+
 static boolean is09(void) { // Checks, if stack[0] is between 0 and 9
   return (stack[0] >= 0 && stack[0] <= 9);
 }
 
-static double _exp_sin(double f, boolean isexp) { // Calculate exp or sin with Taylor series
-  double result = f;
-  double frac = f;
-  if (isexp) result = frac = 1.0;
-  for (byte i = 1; _abs(frac) > TINYNUMBER && i < MAXITERATE; i++) {
-    if (isexp) frac *= f / i; // Fraction for exp
-    else frac *=  f  / (-2 * i * (2 * i + 1)) * f; // Fraction for sin
+/*#define CSTEPS 20 // Cordic steps
+#define CMULT 1e6 // To convert long to double - 6 digit precision
+long const ai[CSTEPS] = { // Cordic A-values (atan(2^-m)) - 6 digit precision
+  785398,
+  463648,
+  244979,
+  124355,
+  62419,
+  31240,
+  15624,
+  7812,
+  3906,
+  1953,
+  977,
+  488,
+  244,
+  122,
+  61,
+  31,
+  15,
+  8,
+  4,
+  2
+};
+static double _cordic(double f) { // Calculate sin
+  byte m = 0;
+  long a = ai[0];
+  long z = f * CMULT;
+  long c = 607253, s = 0;
+  for (byte i = 1; i < CSTEPS; i++) {
+    long ctmp = c;
+    if (z >= 0) {
+      c -= s >> m;
+      s += ctmp >> m;
+      z -= a;
+    }
+    else {
+      c += s >> m;
+      s -= ctmp >> m;
+      z +=  a;
+    }
+    a = ai[i];
+    m++;
+  }
+  return (s / CMULT);
+}*/
+
+#define CSTEPS 20 // Cordic steps
+#define CMULT 1e6 // To convert long to double - 6 digit precision
+//#define CMULT 1000000L // To convert long to double - 6 digit precision
+long const ai[CSTEPS] = { // Cordic A-values (atan(2^-m)) in degrees - 6 digit precision
+  45000000,
+  26565051,
+  14036243,
+  7125016,
+  3576334,
+  1789911,
+  895174,
+  447614,
+  223811,
+  111906,
+  55953,
+  27976,
+  13988,
+  6994,
+  3497,
+  1749,
+  874,
+  437,
+  219,
+  109
+};
+//static double _cordic(double f) { // Calculate sin
+static long _cordic(long z) { // Calculate sin
+  byte m = 0;
+  long a = ai[0];
+//  long z = f * CMULT;
+  long c = 607253, s = 0;
+  for (byte i = 1; i < CSTEPS; i++) {
+    long ctmp = c;
+    if (z >= 0) {
+      c -= s >> m;
+      s += ctmp >> m;
+      z = z - a;
+    }
+    else {
+      c += s >> m;
+      s -= ctmp >> m;
+      z +=  a;
+    }
+    a = ai[i];
+    m++;
+  }
+  //return (s / CMULT);
+  return (s);
+}
+
+
+
+static double _exp_sin_asin(double f, byte nr) { // Calculate exp, sin or asin
+  //if (nr == BITSIN) return (_cordic(f)*CMULT);
+  //if (nr == BITSIN) return sin(f);
+  //if (nr == BITASIN) return asin(f);
+  //if(nr==BITEXP) return exp(f);
+  /*double result =1.0, frac = 1.0; // Start values for exp
+  for (int i = 1; frac > TINYNUMBER && i < MAXITERATE; i++) {
+    frac *= f / i; // Fraction for exp
+    result += frac;
+  }
+  return (result);//*/
+  double result = f, frac = f ; // Start values for sin or asin
+  if (nr == BITEXP) result = frac = 1.0; // Start values for exp
+  for (int i = 1; _abs(frac) > TINYNUMBER && i < MAXITERATE; i++) {
+    int i2 = 2 * i, i2p = 2 * i + 1, i2m = 2 * i - 1, i2m2 = i2m * i2m;
+    double ffi2i2p = f * f / (i2 * i2p);
+    if (nr == BITEXP) frac *= f / i; // Fraction for exp
+    else if (nr == BITSIN) frac *=  -ffi2i2p; // Fraction for sin
+    else frac *= ffi2i2p * i2m2; // Fraction for asin
     result += frac;
   }
   return (result);
+  //*/
 }
 
 static void printfloat(double f, byte mh, byte y) { // Print float with mantissa height (mh) at line y
   long m; // Mantissa
   int8_t e; // Exponent
-  sbuf[0] = ' '; // * Create sign
+  sbuf[0] = CHARSPACE; // * Create sign
   if (f < 0.0) {
     f = - f;
     sbuf[0] = '-';
   }
-  //e = log10(f); // * Calculate exponent
   e = log(f) / log(10); // * Calculate exponent (without using log10())
-  m = (f / _pow10(e - 5)) + .5; // * Create mantissa
+  m = (f / _pow10(e - 5)) + 0.5; // * Create mantissa
   if (m > 0 && m < 1e5) // Change (n-1)-digit-mantissa to n digits
-    m = (f / _pow10(--e - 5)) + .5; // "New" mantissa
+    m = (f / _pow10(--e - 5)) + 0.5; // "New" mantissa
   for (byte i = 6; i > 0; i--) { // Print mantissa
     sbuf[i] = _ones(m) + '0';
     m /= 10;
   }
-  sbuf[7] = e < 0 ? '-' : ' '; // * Create exponent
+  sbuf[7] = e < 0 ? '-' : CHARSPACE; // * Create exponent
   if (e < 0) e = -e;
   sbuf[8] = e >= 10 ? _tens(e) + '0' : '0';
   sbuf[9] = _ones(e) + '0';
-  printcat(sbuf[0], 2, mh , 0, y); // * Print sbuf in float format
-  printcat('.', 2, mh, 23, y);
-  printcat(sbuf[1], 2, mh, 12 , y);
+  printcat(sbuf[0], SIZEM, mh , 0, y); // * Print sbuf in float format
+  printcat('.', SIZEM, mh, 23, y);
+  printcat(sbuf[1], SIZEM, mh, 12 , y);
   //for (byte i = 2; i < 7; i++) printcat(sbuf[i], 2, mh, 12 * i + 9 , y); // With trailing zeros
   byte nonzero = false; // Suppress trailing zeros
   for (byte i = 6; i > 1; i--)
     if (sbuf[i] != '0' || nonzero) {
       nonzero = true;
-      printcat(sbuf[i], 2, mh, 12 * i + 8 , y);
+      printcat(sbuf[i], SIZEM, mh, 12 * i + 8 , y);
     }
-  for (byte i = 7; i < 10; i++) printcat(sbuf[i], 2, 2, 12 * i + 10 , y);
+  for (byte i = 7; i < 10; i++) printcat(sbuf[i], SIZEM, SIZEM, 12 * i + 10 , 0);
 }
 
 static void printscreen(void) { // Print screen due to state
-  byte mh = 2; // Mantissa height
+  byte mh = SIZEM; // Mantissa height
   cls();
-  if (isplaystring) { // Print running message
-    strcpy_P(sbuf, (char*)pgm_read_word(&(msg_table[MSGRUN])));
-    printsat(sbuf, 2, 2, 0, 2);
-  }
+  printbitshift = 1; // Shift second line one pixel down
+  if (isplaystring) printsat("RUN", SIZEM, SIZEM, 0, 2); // Print running message
   else if (ismenu) { // Print MENU above F-keys (789)
     for (byte i = 0; i < FKEYNR; i++) {
       strcpy_P(sbuf, (char*)pgm_read_word(&(cmd[select * FKEYNR + i])));
-      printsat(sbuf, 2, 2, 47 * i, 2);
+      printsat(sbuf, SIZEM, SIZEM, 47 * i, 2);
     }
   }
   else {
-    mh = 4;
-    printcat(isf ? '@' : ' ', 2, 2, 117, 2); // Print shift sign or blank
+    mh = SIZEL;
+    sbuf[2] = NULL; // Print record and/or shift sign
+    sbuf[0] = sbuf[1] = CHARSPACE;
+    if (isrec) sbuf[0] = CHARREC;
+    if (isf) sbuf[1] = CHARSHIFT;
+    printsat(sbuf, SIZEM, SIZEM, 106, 2);
   }
-  //if (!ismenu) printcat(isf ? '@' : ' ', 2, 2, 117, 2); // Print shift sign or blank
+  printbitshift = 0;
   printfloat(stack[0], mh, 0); // Print stack[0]
-
   display();
 }
 
 
 // *****  S E T U P  A N D  L O O P
 
-void reset(void) {
-  isnewnumber = isfirstrun = true;
-  ispushed = isdot = isf = ismenu = isplaystring = false;
-  decimals = select = timestamp = 0;
-}
-
 void setup() {
   // INIT DISPLAY
-  displayinit(); // Init display
+  dinit(); // Init display
   drender(); // Render current half of GDDRAM
-
-  // INIT KEYBOARD
-  pinMode(KPIN, INPUT); // Initialize keyboard pin
 
   // INIT WAKEUP (with pin change interrupt) ... same pin as keyboard!
   pinMode (KPIN, INPUT); // Wakeup pin
@@ -1089,27 +1849,27 @@ void setup() {
   GIFR   |= bit (PCIF);  // Clear any outstanding interrupts
   GIMSK  |= bit (PCIE);  // Enable pin change interrupts
 
-  // SET SYSTEM
+  // INIT SYSTEM
   setframerate(FRAMERATE);
-  brightness = EEPROM.read(EECONTRAST);
-  dcontrast(brightness);
+  dcontrast(brightness = EEPROM[EECONTRAST]);
 
   // START
-  reset();
-  for (byte i = 0; i < STACKSIZE; i++) // Read stack from EEPROM (saved with sleep/OFF)
-    EEPROM.get(EESTACK + i * sizeof(double), stack[i]);
+  loadstack(); // Read stack from EEPROM (saved with sleep/OFF)
 }
 
 
 void loop() {
-
   if (!(nextframe())) return; // Pause render (idle) until it's time for the next frame
 
   if (isfirstrun) {
     isfirstrun = false;
     key = KEY_DUMMY;
   }
-  else key = getkey();
+  else {
+    key = getkeycode();
+    if (key == oldkey) key = NULL; // No key repeat
+    else oldkey = key;
+  }
 
   if (key) { // ### Power management
     timestamp = millis();// Keep awake when active
@@ -1121,35 +1881,10 @@ void loop() {
   else if (pot > DISPLAYOFFTIME) doff(); // Display off
   else if (pot > DIMTIME) dcontrast(0x00); // Dim display
 
-
-  /*if (isrec && key != NULL) { // ### Record keys and write to EEPPROM
-    if (recptr < (recslot + 1)* MAXREC) EEPROM.write(EEREC + recptr++, key); // Rec key
-    }
-    else if (isplay) { // ### Plays recorded keys
-    }
-    /*if (isrec && key != NULL) { // ### Record keys and write to EEPPROM
-    if (oldkey == SHIFT) EEPROM.write(EEADDRREC + recptr - 1, oldkey = fcast(key)); // Rec shifted key
-    else if (recptr < (recslot + 1)* MAXREC) EEPROM.write(EEADDRREC + recptr++, key); // Rec key
-    }
-    else if (isplay) { // ### Plays recorded keys
-    if (key == CLX) isplay = false; // C stops playing
-    else if ( recptr < (recslot + 1)* MAXREC) {
-      key = EEPROM.read(EEADDRREC + recptr); // Read key from EEPROM
-      if (key == DIGIT8 && oldkey == SHIFT) { // Last record reached
-        isplay = false;
-        isfpressed = false;
-        key = NULL;
-      }
-      oldkey = key;
-      recptr++;
-    }
-    }*/
-
-
-
   if (isplaystring) { // ### Play string
     key = playbuf[select];
     if (key == NULL) { // Stop playstring
+      _shadowload(restore); // Restore upper part of stack
       isplaystring = false;
       isnewnumber = true;
       key = KEY_DUMMY;
@@ -1160,6 +1895,24 @@ void loop() {
         ispushed = false;
       }
       select++;
+    }
+  }
+
+  else if (isrec || isplay) { // ### Type recorder (else: playstring works inside play)
+    int maxptr = EEREC + (recslot + 1) * MAXREC;
+    if (isrec) { // Record keys and write to EEPPROM
+      if (key && recptr < maxptr) EEPROM[recptr++] = key;
+    }
+    else { // Read/play key from EEPROM
+      if (key == KEY_13) { // Stop execution
+        isplay = false;
+        key = KEY_DUMMY;
+      }
+      key = EEPROM[recptr++];
+    }
+    if (key == KEY_13 || recptr >= maxptr) {
+      isplay = isrec = false;
+      key = KEY_DUMMY;
     }
   }
 
