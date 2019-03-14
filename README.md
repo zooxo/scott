@@ -8,6 +8,10 @@ Any idea is highly welcome.
 So far I got some hints to use CORDIC or use my own double format (struct with mantissa and exponent).
 
 Documentation is poor. Official version 1.0 is still on hold.
+
+![keypad](https://user-images.githubusercontent.com/16148023/54353067-68715b00-4653-11e9-96aa-34b36e28b6a5.png)
+![circuit](https://user-images.githubusercontent.com/16148023/54353071-6c04e200-4653-11e9-895c-a8a0f4c0dbe4.png)
+
 ---
 
 # SCOTT - Scientific RPN Calculator with OLED display and ATTINY85 microcontroller
