@@ -8,7 +8,7 @@ Any idea is highly welcome.
 So far I got some hints to use CORDIC or use my own double format (struct with mantissa and exponent).
 
 Documentation is poor. Official version 1.0 is still on hold.
-
+---
 
 # SCOTT - Scientific RPN Calculator with OLED display and ATTINY85 microcontroller
   Version 1.0, (c) 2019 by deetee/zooxo
@@ -108,17 +108,12 @@ deetee
        3 Press EE to link the mantissa with the exponent
        4 If applicable: Toggle sign of number with +/-
 
- ## SPECIALITIES
+## SPECIALITIES
 
 ### PREPARING SCOTT AFTER FLASHING
-      As SCOTT saves the state (stack and brightness values) when the deep
-      sleep mode (OFF) is entered manually it also loads the state after
-      switching on.
-      But flashing the ATTINY may clear the EEPROM. So the loaded state when
-      switching on the first time after flashing gets undefined values
-      ( ... and a "non interpretable" display).
+As SCOTT saves the state (stack and brightness values) when the deep sleep mode (OFF) is entered manually it also loads the state after switching on. But flashing the ATTINY may clear the EEPROM. So the loaded state when switching on the first time after flashing gets undefined values ( ... and a "non interpretable" display).
 
-      The following procedure may help to bring SCOTT in a defined state:
+The following procedure may help to bring SCOTT in a defined state:
         1 Press C (X=0)       ... a regular 0-value is shown (register X)
         2 Press ENTER 3 times ... clear the stack (X=Y=Z=T=0)
         3 Press STO (f-2)     ... clear mem
@@ -126,14 +121,10 @@ deetee
         5 Press f             ... wake up from deep sleep mode
 
 ### THE MENU CATALOG
-      To enter the menu catalog press MENU (f-7) and browse the menu items
-      with the UP and DOWN keys (EE and +-). To execute one of the three
-      displayed functions press F1, F2 or F3 (7, 8 or 9).
+To enter the menu catalog press MENU (f-7) and browse the menu items with the UP and DOWN keys (EE and +-). To execute one of the three displayed functions press F1, F2 or F3 (7, 8 or 9).
 
 ### WORKING WITH CONSTANTS
-      SCOTT is capable to save up to 10 constants permanently to the
-      EEPROM memory. See "Appendix - Physical Constants" for some physical
-      constants.
+SCOTT is capable to save up to 10 constants permanently to the EEPROM memory. See "Appendix - Physical Constants" for some physical constants.
 
       Example to write PI to slot 4:
         1 3.141593 ENTER ... enter value for PI
@@ -147,9 +138,7 @@ deetee
         2 Press CONST (f-4) ... recall saved constant
 
 ### USER DEFINED COMMAND KEY
-      SCOTT is capable to save 10 user defined function keys for fast access
-      to intrinsic commands. Get the appropriate number for the desired
-      command from the following table:
+SCOTT is capable to save 10 user defined function keys for fast access to intrinsic commands. Get the appropriate number for the desired command from the following table:
 
       NR ASC COMMAND         NR ASC COMMAND         NR ASC COMMAND
       ------------------     ------------------     ------------------
@@ -187,10 +176,7 @@ deetee
         2 Press CMD (f-5) ... recall saved command
 
 ### TYPE RECORDER
-      SCOTT is able to record 3 user defined sequences of keypresses
-      (up to 146 each) and "replay" them by selecting the appropriate
-      user menu entry. These user defined key sequences or formulas are stored
-      to the EEPROM memory permanently.
+SCOTT is able to record 3 user defined sequences of keypresses (up to 146 each) and "replay" them by selecting the appropriate user menu entry. These user defined key sequences or formulas are stored to the EEPROM memory permanently.
 
       Example to record temperature conversion (Fahrenheit -> Celsius):
         1 MENU (f-7)   ... enter MENU
@@ -207,29 +193,11 @@ deetee
         5 X=10         ... 50 Fahrenheit are 10 Celsius
 
 ### POWER MANAGEMENT
-      As SCOTT is supplied with battery power a severe power management is
-      essential. After 10 seconds without pressing a key the display brightness
-      will be reduced to a minimum. After 10 more seconds the display will be
-      deactivated. Till now every further keypress will be interpreted as
-      normal keypress for calculations.
-      After 10 more seconds without pressing a key SCOTT falls into a deep sleep
-      mode. Only a pin change (pressing any key in the upper part of the keyboard)
-      wakes SCOTT up, but this keypress will not be interpreted as normal keypress
-      for calculations.
-
-      If demanded the user can enter the sleep mode by pressing SHIFT and C.
-      Additionally SCOTT saves the stack and brightness values to the EEPROM.
-      By pressing SHIFT and 0 the battery voltage will be shown. The default
-      brightness of the display can be set by entering a value (0...255) followed
-      CMD from the MENU (SHIFT and 7).
-
-      Running on a single battery (CR2032) SCOTT draws a current of 10 mA
-      (bright display with a lot of "8s"). With a battery capacity of at least
-      200 mAh SCOTT can calculate approximately 20 hours.
-      After dimming the current falls to 5.5 mA, after deactivating the display
-      1.1 mA are needed.
-      In sleep mode SCOTT consumes less than 0.25 mA. With a battery capacity of
-      at least 200 mAh SCOTT lasts more than a month in sleep mode.
+As SCOTT is supplied with battery power a severe power management is essential. After 10 seconds without pressing a key the display brightness will be reduced to a minimum. After 10 more seconds the display will be deactivated. Till now every further keypress will be interpreted as normal keypress for calculations.  
+After 10 more seconds without pressing a key SCOTT falls into a deep sleep mode. Only a pin change (pressing any key in the upper part of the keyboard) wakes SCOTT up, but this keypress will not be interpreted as normal keypress for calculations.  
+If demanded the user can enter the sleep mode by pressing SHIFT and C. Additionally SCOTT saves the stack and brightness values to the EEPROM. By pressing SHIFT and 0 the battery voltage will be shown. The default brightness of the display can be set by entering a value (0...255) followed CMD from the MENU (SHIFT and 7).  
+Running on a single battery (CR2032) SCOTT draws a current of 10 mA (bright display with a lot of "8s"). With a battery capacity of at least 200 mAh SCOTT can calculate approximately 20 hours. After dimming the current falls to 5.5 mA, after deactivating the display 1.1 mA are needed.  
+In sleep mode SCOTT consumes less than 0.25 mA. With a battery capacity of at least 200 mAh SCOTT lasts more than a month in sleep mode.
 
 ### ANNUITY (PRESENT VALUE)
       Example to calculate the present value of a $1 5 year return with an
@@ -372,15 +340,8 @@ deetee
       - 1 x CR2032 battery (3V)
 
 ## PLAYSTRING
-
-    To save flash memory a lot of functions are calculated with SCOTT itself
-    (and not with libraries). Every command of SCOTT can be dispatched with one
-    character (one byte command - see chapter COMMANDS). So a sequence of commands
-    can be represented and "played" with a sequence of characters in a string.
-    After playing a string the result(s) is/are shown in the register(s) X
-    and/or Y. Other parts of the stack (including mem) will be restored from a
-    "shadow stack".
-
+To save flash memory a lot of functions are calculated with SCOTT itself (and not with libraries). Every command of SCOTT can be dispatched with one character (one byte command - see chapter COMMANDS). So a sequence of commands can be represented and "played" with a sequence of characters in a string.  
+After playing a string the result(s) is/are shown in the register(s) X and/or Y. Other parts of the stack (including mem) will be restored from a "shadow stack".
 
 ### PLAYSTRING - PSEUDO CODES
 
