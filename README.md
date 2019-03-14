@@ -9,9 +9,6 @@ So far I got some hints to use CORDIC or use my own double format (struct with m
 
 Documentation is poor. Official version 1.0 is still on hold.
 
-![keypad](https://user-images.githubusercontent.com/16148023/54353067-68715b00-4653-11e9-96aa-34b36e28b6a5.png)
-![circuit](https://user-images.githubusercontent.com/16148023/54353071-6c04e200-4653-11e9-895c-a8a0f4c0dbe4.png)
-
 ---
 
 # SCOTT - Scientific RPN Calculator with OLED display and ATTINY85 microcontroller
@@ -51,6 +48,8 @@ Enjoy!
 deetee
 
 ## THE CALCULATOR
+![keypad](https://user-images.githubusercontent.com/16148023/54353067-68715b00-4653-11e9-96aa-34b36e28b6a5.png)
+
 
 ### DISPLAY (permanent SCI notation)
 
@@ -302,6 +301,9 @@ In sleep mode SCOTT consumes less than 0.25 mA. With a battery capacity of at le
 
 
 ### CIRCUIT DIAGRAM
+
+![circuit](https://user-images.githubusercontent.com/16148023/54353071-6c04e200-4653-11e9-895c-a8a0f4c0dbe4.png)
+
                 ____                   _________
                |*   |--Vcc       Vcc--| DISPLAY |
        +---D3--| AT |--SCK-------SCK--| SSD1306 |
