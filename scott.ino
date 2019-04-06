@@ -1,4 +1,10 @@
 /*
+  TODOs:
+  - setcontrast ins menu (statt rotup) and f-0 neu belegen (ROTup, PI
+  - unite const und cmd
+  - HELP shows shift-keys
+  - SOLVE INT
+
 
   ____________________
 
@@ -1650,7 +1656,7 @@ static void printscreen(void) { // Print screen due to state
   byte mh = SIZEM; // Mantissa height
   cls();
   printbitshift = 1; // Shift second line one pixel down
-  if (isplaystring) printsat("RUN", SIZEM, SIZEM, 0, 2); // Print running message
+  if (isplaystring || isplay) printsat("RUN", SIZEM, SIZEM, 0, 2); // Print running message
   else if (ismenu) { // Print MENU above F-keys (789)
     for (byte i = 0; i < FKEYNR; i++) {
       strcpy_P(sbuf, (char*)pgm_read_word(&(cmd[select * FKEYNR + i])));
@@ -1666,7 +1672,7 @@ static void printscreen(void) { // Print screen due to state
     printsat(sbuf, SIZEM, SIZEM, 106, 2);
   }
   printbitshift = 0;
-  printfloat(stack[0], mh, 0); // Print stack[0]
+  if (!isplaystring && !isplay) printfloat(stack[0], mh, 0); // Print stack[0]
   display();
 }
 
@@ -1694,7 +1700,7 @@ void setup() {
 
 
 void loop() {
-  if (!(nextframe())) return; // Pause render (idle) until it's time for the next frame
+  if (!(nextframe())) return; // Pause render (idle) until next frame
 
   if (isfirstrun) {
     isfirstrun = false;
