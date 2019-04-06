@@ -8,6 +8,10 @@ SCOTT is free software. You can redistribute it and/or modify it under the terms
 
 ![scott](https://user-images.githubusercontent.com/16148023/55669954-ddfccf80-587d-11e9-81ee-e373866e60ab.jpg)
 
+
+See a video at: https://youtu.be/h7Wjb0mhJ38
+
+
 ## PREAMBLE
 
 To examine how much "calculator power" a simple microcontroller like the ATTINY85 is able to perform was already the intention of ScArY (www.github.com/zooxo/scary). Unfortunately ScArY was based on a premanufactured development board (QYF-TM1638) and was restricted to a 7 segment display.
