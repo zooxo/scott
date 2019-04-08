@@ -1,7 +1,7 @@
 # SCOTT - Scientific RPN Calculator with OLED display and ATTINY85 microcontroller
-  Version 1.0, (c) 2019 by deetee/zooxo
+  Version 1.0, (c) 2019 by deetee/zooxo  
+  This software is covered by the 3-clause BSD license.
 
-SCOTT is free software. You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation.
 
 ![scott](https://user-images.githubusercontent.com/16148023/55669954-ddfccf80-587d-11e9-81ee-e373866e60ab.jpg)
 
