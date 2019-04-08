@@ -1,6 +1,3 @@
-# SCOTT
-Scientific RPN Calculator with OLED display and ATTINY85
-
 # SCOTT - Scientific RPN Calculator with OLED display and ATTINY85 microcontroller
   Version 1.0, (c) 2019 by deetee/zooxo
 
