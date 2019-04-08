@@ -1,11 +1,4 @@
 /*
-  TODOs:
-  - setcontrast ins menu (statt rotup) and f-0 neu belegen (ROTup, PI
-  - unite const und cmd
-  - HELP shows shift-keys
-  - SOLVE INT
-
-
   ____________________
 
   - Welcome to SCOTT -
