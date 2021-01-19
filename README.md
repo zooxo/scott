@@ -2,7 +2,7 @@
   Version 1.0, (c) 2019 by deetee/zooxo  
   This software is covered by the 3-clause BSD license.
 
-## SCOTT has got a powerful successor: IVT - see more at github.com/zooxo/ivt
+## *** SCOTT has got a powerful successor: IVT - see more at github.com/zooxo/ivt ***
 
 
 
