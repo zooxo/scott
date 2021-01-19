@@ -4,7 +4,7 @@
 
 ## *** SCOTT has got a powerful successor: IVT - see more at github.com/zooxo/ivt ***
 
-
+---
 
 ![scott](https://user-images.githubusercontent.com/16148023/55669954-ddfccf80-587d-11e9-81ee-e373866e60ab.jpg)
 
